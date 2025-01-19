@@ -1,0 +1,85 @@
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - charts/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+name: Integration
+
+jobs:
+  change:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identify Modified Charts
+        id: change
+        run: |
+          MODIFIED_CHARTS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} \
+            | grep '^charts/' | awk -F/ '{print $2}' | sort -u)
+
+          if [ -z "$MODIFIED_CHARTS" ]; then
+            echo "No charts have been modified."
+            echo "::set-output name=list::[]"
+            exit 0
+          fi
+
+          echo "Found modified charts:"
+          echo "$MODIFIED_CHARTS"
+
+          # Convert the list to JSON for the matrix strategy
+          CHART_LIST=$(echo "$MODIFIED_CHARTS" | jq -R -s -c 'split("\n")[:-1]')
+          echo "::set-output name=list::$CHART_LIST"
+    outputs:
+      list: ${{ steps.change.outputs.list }}
+
+  verify:
+    needs: change
+    runs-on: ubuntu-latest
+    if: needs.change.outputs.list != '[]'
+    strategy:
+      matrix:
+        chart: ${{ fromJson(needs.change.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: |
+          helm lint ./charts/${{ matrix.chart }}
+      - name: helm template
+        run: |
+          helm template ./charts/${{ matrix.chart }}
+      - name: helm dependency update
+        run: |
+          helm dependency update ./charts/${{ matrix.chart }}
+
+  validate:
+    needs: change
+    runs-on: ubuntu-latest
+    if: needs.change.outputs.list != '[]'
+    strategy:
+      matrix:
+        k8s:
+          - 1.28
+          - 1.29
+          - 1.30
+          - 1.31
+        chart: ${{ fromJson(needs.change.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+      - uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          entrypoint: /kubeconform
+          args: "-summary -output json -kubernetes-version ${{ matrix.k8s }} ./charts/${{ matrix.chart }}"
