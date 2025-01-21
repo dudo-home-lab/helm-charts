@@ -3,6 +3,17 @@ entries:
   cloudflare-tunnel-remote:
   - apiVersion: v2
     appVersion: 2025.1.0
+    created: "2025-01-21T19:29:48.507645772Z"
+    description: Deployment of a remotely managed tunnel that has already been provisioned
+      in Cloudflare
+    digest: ffc72bf628a5f3008138538824b92fc8a3eef5493ed60dec5f52272bf9a66460
+    name: cloudflare-tunnel-remote
+    type: application
+    urls:
+    - https://github.com/dudo-home-lab/helm-charts/releases/download/cloudflare-tunnel-remote-0.1.2/cloudflare-tunnel-remote-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: 2025.1.0
     created: "2025-01-21T19:25:47.892454906Z"
     description: Deployment of a remotely managed tunnel that has already been provisioned
       in Cloudflare
@@ -12,4 +23,4 @@ entries:
     urls:
     - https://github.com/dudo-home-lab/helm-charts/releases/download/cloudflare-tunnel-remote-0.1.1/cloudflare-tunnel-remote-0.1.1.tgz
     version: 0.1.1
-generated: "2025-01-21T19:25:47.892462069Z"
+generated: "2025-01-21T19:29:48.507654328Z"
